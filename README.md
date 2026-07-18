@@ -2,7 +2,12 @@
 
 This repository stores all modifications, keyboard shortcuts, and configurations needed to transform the default Pop Shell extension into the **Custom Whitelist Mode**.
 
+![https://i.ibb.co/pjC7FWc7/Menu-Bar.png]
+
 In this mode, all system windows float normally by default. Only applications explicitly added to the "Tiling Windows List" (accessible via the top panel UI) will be automatically tiled by Pop Shell. Additionally, the design features thinner active-hint borders and removes the visual background overlay on the Pop Launcher bar.
+
+> [!NOTE]
+> **This is a personal repository.** The shortcut configurations, the use of distrobox for compilation, and the specific design choices in the `.patch` file reflect my personal workflow and tastes. I am sharing this publicly to offer a new perspective on how Pop Shell can be used, but feel free to customize, adapt, or completely change this solution according to your own preferences and technical knowledge!
 
 ## How to Restore the Environment on a Fresh Install
 
@@ -31,6 +36,9 @@ The `.patch` file contains all source code modifications (UI tweaks, inverted lo
    # For standard systems (Ubuntu/Debian/Arch) simply run: make local-install
    ```
    *After installing, remember to reload your session or enable the extension in GNOME Extensions.*
+
+![https://i.ibb.co/XrHXW6MQ/Tiling-Window-List.png]
+
 
 ### Step 2: Restore Keyboard Shortcuts
 The `.patch` file does not handle keyboard shortcuts, as they are isolated user configurations saved in the GNOME `dconf` database. To reload them from the backup:
