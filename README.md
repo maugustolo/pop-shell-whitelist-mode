@@ -2,7 +2,7 @@
 
 This repository stores all modifications, keyboard shortcuts, and configurations needed to transform the default Pop Shell extension into the **Custom Whitelist Mode**.
 
-![https://i.ibb.co/pjC7FWc7/Menu-Bar.png]
+![https://i.ibb.co/pjC7FWc7/Menu-Bar.png](https://i.ibb.co/pjC7FWc7/Menu-Bar.png)
 
 In this mode, all system windows float normally by default. Only applications explicitly added to the "Tiling Windows List" (accessible via the top panel UI) will be automatically tiled by Pop Shell. Additionally, the design features thinner active-hint borders and removes the visual background overlay on the Pop Launcher bar.
 
@@ -37,7 +37,7 @@ The `.patch` file contains all source code modifications (UI tweaks, inverted lo
    ```
    *After installing, remember to reload your session or enable the extension in GNOME Extensions.*
 
-![https://i.ibb.co/XrHXW6MQ/Tiling-Window-List.png]
+![https://i.ibb.co/XrHXW6MQ/Tiling-Window-List.png](https://i.ibb.co/XrHXW6MQ/Tiling-Window-List.png)
 
 
 ### Step 2: Restore Keyboard Shortcuts
