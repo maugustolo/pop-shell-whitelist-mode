@@ -1,0 +1,263 @@
+diff --git a/dark.css b/dark.css
+index 732aefb..2dd24cb 100644
+--- a/dark.css
++++ b/dark.css
+@@ -10,11 +10,11 @@
+ }
+ 
+ .pop-shell-border-normal {
+-    border-width: 3px;
++    border-width: 2px;
+ }
+ 
+ .pop-shell-border-maximize {
+-    border-width: 3px;
++    border-width: 2px;
+ }
+ 
+ .pop-shell-search-element:select{
+diff --git a/highcontrast.css b/highcontrast.css
+index 2cc85c2..38d380b 100644
+--- a/highcontrast.css
++++ b/highcontrast.css
+@@ -10,11 +10,11 @@
+ }
+ 
+ .pop-shell-border-normal {
+-    border-width: 3px;
++    border-width: 2px;
+ }
+ 
+ .pop-shell-border-maximize {
+-    border-width: 3px;
++    border-width: 2px;
+ }
+ 
+ .pop-shell-search-element:select{
+diff --git a/light.css b/light.css
+index 7e95c48..270f4c6 100644
+--- a/light.css
++++ b/light.css
+@@ -10,11 +10,11 @@
+ }
+ 
+ .pop-shell-border-normal {
+-    border-width: 3px;
++    border-width: 2px;
+ }
+ 
+ .pop-shell-border-maximize {
+-    border-width: 3px;
++    border-width: 2px;
+ }
+ 
+ .pop-shell-search-element:select{
+diff --git a/src/config.ts b/src/config.ts
+index 440d4ec..580f9dd 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -87,6 +87,8 @@ export interface FloatRule {
+ export class Config {
+     /** List of windows that should float, regardless of their WM hints */
+     float: Array<FloatRule> = [];
++    /** List of windows that should tile (whitelist mode) */
++    tile: Array<FloatRule> = [];
+ 
+     /**
+      * List of Windows with skip taskbar true but still hidden in Overview,
+@@ -99,25 +101,39 @@ export class Config {
+ 
+     /** Add a floating exception which matches by wm_class */
+     add_app_exception(wmclass: string) {
+-        for (const r of this.float) {
++        for (const r of this.tile) {
+             if (r.class === wmclass && r.title === undefined) return;
+         }
+ 
+-        this.float.push({ class: wmclass });
++        this.tile.push({ class: wmclass });
+         this.sync_to_disk();
+     }
+ 
+     /** Add a floating exception which matches by wm_title */
+     add_window_exception(wmclass: string, title: string) {
+-        for (const r of this.float) {
++        for (const r of this.tile) {
+             if (r.class === wmclass && r.title === title) return;
+         }
+ 
+-        this.float.push({ class: wmclass, title });
++        this.tile.push({ class: wmclass, title });
+         this.sync_to_disk();
+     }
+ 
+     window_shall_float(wclass: string, title: string): boolean {
++        // Whitelist mode
++        if (this.tile && this.tile.length > 0) {
++            for (const rule of this.tile) {
++                if (rule.class && !new RegExp(rule.class, 'i').test(wclass)) continue;
++                if (rule.title && !new RegExp(rule.title, 'i').test(title)) continue;
++                
++                // If it matches a tile rule, it shall NOT float (it tiles)
++                return rule.disabled ? true : false;
++            }
++            // If it doesn't match any tile rule, it SHALL float
++            return true;
++        }
++
++        // Blacklist mode (default)
+         for (const rule of this.float.concat(DEFAULT_FLOAT_RULES)) {
+             if (rule.class) {
+                 if (!new RegExp(rule.class, 'i').test(wclass)) {
+@@ -137,6 +153,26 @@ export class Config {
+         return false;
+     }
+ 
++    window_shall_tile(wclass: string, title: string): boolean {
++        for (const rule of this.tile) {
++            if (rule.class) {
++                if (!new RegExp(rule.class, 'i').test(wclass)) {
++                    continue;
++                }
++            }
++
++            if (rule.title) {
++                if (!new RegExp(rule.title, 'i').test(title)) {
++                    continue;
++                }
++            }
++
++            return rule.disabled ? false : true;
++        }
++
++        return false;
++    }
++
+     skiptaskbar_shall_hide(meta_window: any) {
+         let wmclass = meta_window.get_wm_class();
+         let wmtitle = meta_window.get_title();
+@@ -167,7 +203,12 @@ export class Config {
+ 
+         if (conf.tag === 0) {
+             let c = conf.value;
+-            this.float = c.float;
++            if (c.float) {
++                this.float = c.float;
++            }
++            if (c.tile) {
++                this.tile = c.tile;
++            }
+             this.log_on_focus = c.log_on_focus;
+         } else {
+             log(`error loading conf: ${conf.why}`);
+@@ -218,7 +259,7 @@ export class Config {
+     remove_user_exception(wmclass: string | undefined, wmtitle: string | undefined) {
+         let index = 0;
+         let found = new Array();
+-        for (const value of this.float.values()) {
++        for (const value of this.tile.values()) {
+             if (value.class === wmclass && value.title === wmtitle) {
+                 found.push(index);
+             }
+@@ -227,7 +268,7 @@ export class Config {
+         }
+ 
+         if (found.length !== 0) {
+-            for (const idx of found) swap_remove(this.float, idx);
++            for (const idx of found) swap_remove(this.tile, idx);
+ 
+             this.sync_to_disk();
+         }
+diff --git a/src/dialog_add_exception.ts b/src/dialog_add_exception.ts
+index af34781..f481df0 100644
+--- a/src/dialog_add_exception.ts
++++ b/src/dialog_add_exception.ts
+@@ -14,11 +14,11 @@ export class AddExceptionDialog {
+     });
+ 
+     constructor(cancel: () => void, this_app: () => void, current_window: () => void, on_close: () => void) {
+-        let title = St.Label.new('Add Floating Window Exception');
++        let title = St.Label.new('Add Tiling Window Exception');
+         title.set_x_align(Clutter.ActorAlign.CENTER);
+         title.set_style('font-weight: bold');
+ 
+-        let desc = St.Label.new('Float the selected window or all windows from the application.');
++        let desc = St.Label.new('Tile the selected window or all windows from the application.');
+         desc.set_x_align(Clutter.ActorAlign.CENTER);
+ 
+         let l = this.dialog.contentLayout;
+diff --git a/src/floating_exceptions/src/main.ts b/src/floating_exceptions/src/main.ts
+index de8d312..7d86e39 100644
+--- a/src/floating_exceptions/src/main.ts
++++ b/src/floating_exceptions/src/main.ts
+@@ -95,7 +95,7 @@ export class MainView implements View {
+         this.list = Gtk.ListBox.new();
+         this.list.set_selection_mode(Gtk.SelectionMode.NONE);
+         this.list.set_header_func(list_header_func);
+-        this.list.add(exceptions);
++        // this.list.add(exceptions);
+ 
+         let scroller = new Gtk.ScrolledWindow();
+         scroller.hscrollbar_policy = Gtk.PolicyType.NEVER;
+@@ -107,7 +107,7 @@ export class MainView implements View {
+         list_frame.add(scroller);
+ 
+         let desc = new Gtk.Label({
+-            label: 'Add exceptions by selecting currently running applications and windows.',
++            label: 'Add windows to the tiling list by selecting currently running applications and windows.',
+         });
+         desc.set_line_wrap(true);
+         desc.set_halign(Gtk.Align.CENTER);
+@@ -218,7 +218,7 @@ class App {
+ 
+         let back = Gtk.Button.new_from_icon_name('go-previous-symbolic', Gtk.IconSize.BUTTON);
+ 
+-        const TITLE = 'Floating Window Exceptions';
++        const TITLE = 'Tiling Windows List';
+ 
+         let win = new Gtk.Dialog({ use_header_bar: true });
+         let headerbar = win.get_header_bar();
+@@ -247,7 +247,7 @@ class App {
+             this.exceptions_view.add_rule(wmclass, wmtitle, !disabled);
+         }
+ 
+-        for (const value of Array.from<any>(this.config.float)) {
++        for (const value of Array.from<any>(this.config.tile)) {
+             let wmtitle = value.title ?? undefined;
+             let wmclass = value.class ?? undefined;
+             if (!value.disabled) this.main_view.add_rule(wmclass, wmtitle);
+diff --git a/src/launcher.ts b/src/launcher.ts
+index 86c6a86..786eb0b 100644
+--- a/src/launcher.ts
++++ b/src/launcher.ts
+@@ -73,7 +73,7 @@ export class Launcher extends search.Search {
+                     ext.overlay.y = y;
+                     ext.overlay.width = width;
+                     ext.overlay.height = height;
+-                    ext.overlay.visible = true;
++                    // ext.overlay.visible = true; // Desativado a pedido do usuário
+                 }
+             }
+         };
+diff --git a/src/panel_settings.ts b/src/panel_settings.ts
+index b72c6f3..e94883a 100644
+--- a/src/panel_settings.ts
++++ b/src/panel_settings.ts
+@@ -129,7 +129,7 @@ function settings_button(menu: any): any {
+ }
+ 
+ function floating_window_exceptions(ext: Ext, menu: any): any {
+-    let label = new St.Label({ text: 'Floating Window Exceptions' });
++    let label = new St.Label({ text: 'Tiling Windows List' });
+     label.set_x_expand(true);
+ 
+     let icon = new St.Icon({ icon_name: 'go-next-symbolic', icon_size: 16 });
+@@ -184,7 +184,7 @@ function shortcuts(menu: any): any {
+     layout_manager.set_column_spacing(30);
+     layout_manager.attach(create_label(_('Shortcuts')), 0, 0, 2, 1);
+ 
+-    let launcher_shortcut = _('Super + /');
++    let launcher_shortcut = _('Super + Space');
+     // const cosmic_settings = Settings.settings_new_id(
+     //   'org.gnome.shell.extensions.pop-cosmic'
+     // );
